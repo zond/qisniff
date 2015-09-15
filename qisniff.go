@@ -1,25 +1,24 @@
 package main
 
 import (
-	"bytes"
-	"github.com/google/gopacket/layers"
-	"net"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/pcap"
-	"time"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"os"
-	"flag"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
+	"github.com/google/gopacket/tcpassembly"
 )
 
 type pktID struct {
-	srcIP string
-	dstIP string
+	srcIP   string
+	dstIP   string
 	srcPort layers.TCPPort
 	dstPort layers.TCPPort
-	proto layers.IPProtocol
-	seq uint32
+	proto   layers.IPProtocol
+	seq     uint32
 }
 
 func (p pktID) String() string {
@@ -27,30 +26,31 @@ func (p pktID) String() string {
 }
 
 type pktData struct {
-	sum uint32
+	sum  uint32
 	load gopacket.Payload
 	time int64
-	pkt gopacket.Packet
+	pkt  gopacket.Packet
+}
+
+type stream struct{}
+
+func (s *stream) Reassembled(rea []tcpassembly.Reassembly) {
+	for _, r := range rea {
+		fmt.Print(string(r.Bytes))
+	}
+}
+
+func (s *stream) ReassemblyComplete() {
+	fmt.Println("done!")
+}
+
+type streamFactory struct{}
+
+func (s *streamFactory) New(netFlow, tcpFlow gopacket.Flow) tcpassembly.Stream {
+	return &stream{}
 }
 
 func main() {
-	var (
-	 	eth layers.Ethernet
-	 	ip4 layers.IPv4
-  	 	ip6 layers.IPv6
-  	 	tcp layers.TCP
-	 	srcIP net.IP
-	 	dstIP net.IP
-	 	srcPort layers.TCPPort
-	 	dstPort layers.TCPPort
-	 	proto layers.IPProtocol
-	 	seq uint32
-		tcpPayload []byte
-	 	payload gopacket.Payload
-	)
-
-	assemblers := map[gopacket.Flow]*tcpassembly.Assembler{}
-
 	file := flag.String("file", "", "What file to parse")
 
 	flag.Parse()
@@ -60,15 +60,24 @@ func main() {
 		os.Exit(1)
 	}
 
+	var (
+		eth     layers.Ethernet
+		ip4     layers.IPv4
+		ip6     layers.IPv6
+		tcp     layers.TCP
+		payload gopacket.Payload
+		decoded []gopacket.LayerType
+	)
+
 	h, err := pcap.OpenOffline(*file)
 	if err != nil {
 		panic(err)
 	}
 	source := gopacket.NewPacketSource(h, h.LinkType())
 	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &ip6, &tcp, &payload)
-	decoded := []gopacket.LayerType{}
 
-	pks := map[pktID]pktData{}
+	assemblers := map[gopacket.Flow]*tcpassembly.Assembler{}
+	pool := tcpassembly.NewStreamPool(&streamFactory{})
 
 	for pkt := range source.Packets() {
 		if err := parser.DecodeLayers(pkt.Data(), &decoded); err != nil {
@@ -76,52 +85,18 @@ func main() {
 		}
 		isTCP := false
 		for _, typ := range decoded {
-			switch typ {
-            		case layers.LayerTypeIPv4:
-				srcIP = ip4.SrcIP
-				dstIP = ip4.DstIP
-				proto = ip4.Protocol
-            		case layers.LayerTypeIPv6:
-				srcIP = ip6.SrcIP
-				dstIP = ip6.DstIP
-				proto = 0
-            		case layers.LayerTypeTCP:
-				tcpPayload = tcp.Payload
-				srcPort = tcp.SrcPort
-				dstPort = tcp.DstPort
-				seq = tcp.Seq
+			if typ == layers.LayerTypeTCP {
 				isTCP = true
 			}
 		}
-		if isTCP && len(tcpPayload) > 0 {
-			id := pktID{
-				srcIP: string(srcIP),
-				dstIP: string(dstIP),
-				srcPort: srcPort,
-				dstPort: dstPort,
-				proto: proto,
-				seq: seq,
-			}
-			data := pktData{
-				load: tcpPayload,
-				time: pkt.Metadata().Timestamp.UnixNano(),
-				pkt: pkt,
-			}
-			foundData, found := pks[id]
-			if found {
-				min := len(foundData.load)
-				if len(data.load) < min {
-					min = len(data.load)
-				}
-				if found && bytes.Compare(foundData.load[:min], data.load[:min]) != 0 { 
-					fmt.Printf("suspicious packet %v: old sum %v, new sum %v, %v apart\n%v\n%v\n", id, foundData.sum, data.sum, time.Duration(data.time - foundData.time), foundData.pkt, pkt)
-				}
-			}
-			pks[id] = data
-			flow := tcp.transportFlow()
-			ass, found := flows[flow]
+		if isTCP {
+			flow := tcp.TransportFlow()
+			ass, found := assemblers[flow]
 			if !found {
-				ass = 
+				ass = tcpassembly.NewAssembler(pool)
+				assemblers[flow] = ass
+			}
+			ass.Assemble(flow, &tcp)
 		}
 	}
 }
