@@ -112,13 +112,15 @@ func main() {
 	}
 
 	var (
-		srcIP   net.IP
-		dstIP   net.IP
-		eth     layers.Ethernet
-		ip4     layers.IPv4
-		ip6     layers.IPv6
-		tcp     layers.TCP
+		srcIP net.IP
+		dstIP net.IP
+		eth   layers.Ethernet
+		ip4   layers.IPv4
+		ip6   layers.IPv6
+		tcp   layers.TCP
+		//	netLayer gopacket.NetworkLayer
 		payload gopacket.Payload
+		//tcpFrame []byte
 		decoded []gopacket.LayerType
 		isTCP   bool
 	)
@@ -141,14 +143,23 @@ func main() {
 			case layers.LayerTypeIPv4:
 				srcIP = ip4.SrcIP
 				dstIP = ip4.DstIP
+				//netLayer = &ip4
+				//tcpFrame = ip4.Payload
 			case layers.LayerTypeIPv6:
 				srcIP = ip6.SrcIP
 				dstIP = ip6.DstIP
+				//tcpFrame = ip6.Payload
+				//netLayer = &ip6
 			case layers.LayerTypeTCP:
 				isTCP = true
 			}
 		}
 		if isTCP {
+			/*
+				calcSum := sum.SumTCP(netLayer, tcpFrame)
+
+				fmt.Println(calcSum, tcp.Checksum)
+			*/
 			id := &streamID{
 				srcIP:   string(srcIP),
 				dstIP:   string(dstIP),
