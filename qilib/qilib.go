@@ -91,6 +91,16 @@ func newStream(sess *Session, id *streamID, seq uint32) (*stream, error) {
 	}, nil
 }
 
+func (s *stream) clean() error {
+	if err := s.f.Close(); err != nil {
+		return err
+	}
+	if err := os.Remove(s.f.Name()); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *stream) write(pkt gopacket.Packet, tcp *layers.TCP) error {
 
 	// Empty SYN and FIN packets will increment the sequence number without incrementing
@@ -213,7 +223,7 @@ func NewSession(c Config) *Session {
 // Clean will remove all created tempfiles.
 func (s *Session) Clean() error {
 	for id, strm := range s.streams {
-		if s.err = os.Remove(strm.f.Name()); s.err != nil {
+		if s.err = strm.clean(); s.err != nil {
 			return s.err
 		}
 		delete(s.streams, id)
@@ -296,7 +306,7 @@ func (s *Session) handle() error {
 		s.nextCleaning = time.Now().Add(cleanInterval)
 		for id, strm := range s.streams {
 			if strm.lastAccess.Add(cleanInterval).Before(time.Now()) {
-				if s.err = os.Remove(strm.f.Name()); s.err != nil {
+				if s.err = strm.clean(); s.err != nil {
 					return s.err
 				}
 				delete(s.streams, id)

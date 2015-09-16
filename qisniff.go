@@ -56,6 +56,8 @@ func main() {
 	})
 	defer sess.Clean()
 
-	log.Fatal(sess.Run())
+	if err := sess.Run(); err != nil {
+		log.Fatal(err)
+	}
 
 }
