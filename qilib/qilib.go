@@ -166,8 +166,8 @@ type Config struct {
 	Progress func(pkt gopacket.Packet)
 	// Warning indicator.
 	Warning func(pkt gopacket.Packet, diff Diff)
-	// Unknown packet indicator.
-	Unknown func(pkt gopacket.Packet)
+	// Unparseable packet indicator.
+	Unparseable func(pkt gopacket.Packet)
 }
 
 // Session encapsulates a sniffing session.
@@ -240,8 +240,8 @@ func (s *Session) handle() error {
 	}
 
 	if s.err = s.parser.DecodeLayers(s.pkt.Data(), &s.decoded); s.err != nil {
-		if s.Unknown != nil {
-			s.Unknown(s.pkt)
+		if s.Unparseable != nil {
+			s.Unparseable(s.pkt)
 		}
 		return nil
 	}

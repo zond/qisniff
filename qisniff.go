@@ -50,6 +50,9 @@ func main() {
 		Warning: func(pkt gopacket.Packet, diff qilib.Diff) {
 			fmt.Printf("%v %v\n<A>\n%s\n</A>\n<B>\n%s\n</B>\n", diff.ID, diff.Seq, diff.A, diff.B)
 		},
+		Unparseable: func(pkt gopacket.Packet) {
+			fmt.Printf("Unparseable packet\n%v\n", pkt)
+		},
 	})
 
 	log.Fatal(sess.Run())
