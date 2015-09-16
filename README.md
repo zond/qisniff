@@ -9,9 +9,9 @@ Differences in this data is indicative of trickery.
 
 ## Usage
 
- go get github.com/zond/qisniff
- qisniff -file=file.pcap
- qisniff -dev=en0
+   go get github.com/zond/qisniff
+   qisniff -file=file.pcap
+   qisniff -dev=en0
 
 ## TODO
 
