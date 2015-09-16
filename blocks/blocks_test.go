@@ -42,6 +42,6 @@ func TestOverlaps(t *testing.T) {
 	blks := Blocks{}
 	blks = blks.Add(0, 100)
 	blks = blks.Add(110, 200)
-	overlaps := blks.Overlaps(50, 150)
-	checkBlocks(t, overlaps, Blocks{{50, 100}, {110, 150}})
+	checkBlocks(t, blks.Overlaps(50, 150), Blocks{{50, 100}, {110, 150}})
+	checkBlocks(t, blks.Overlaps(110, 220), Blocks{{110, 200}})
 }

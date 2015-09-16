@@ -4,7 +4,7 @@ type Block struct {
 	A, B int64
 }
 
-func (blk Block) Overlaps(a, b int64) bool {
+func (blk Block) Overlap(a, b int64) *Block {
 	left := a
 	if blk.A > left {
 		left = blk.A
@@ -14,9 +14,9 @@ func (blk Block) Overlaps(a, b int64) bool {
 		right = blk.B
 	}
 	if right > left {
-		return true
+		return &Block{left, right}
 	}
-	return false
+	return nil
 }
 
 type Blocks []Block
@@ -31,6 +31,16 @@ func (blks Blocks) Less(i, j int) bool {
 
 func (blks Blocks) Swap(i, j int) {
 	blks[i], blks[j] = blks[j], blks[i]
+}
+
+func (blks Blocks) Overlaps(a, b int64) Blocks {
+	var result Blocks
+	for _, blk := range blks {
+		if overlap := blk.Overlap(a, b); overlap != nil {
+			result = append(result, *overlap)
+		}
+	}
+	return result
 }
 
 func (blks Blocks) Add(a, b int64) Blocks {
@@ -76,13 +86,4 @@ func (blks Blocks) Add(a, b int64) Blocks {
 		result = append(result, Block{a, b})
 	}
 	return result
-}
-
-func (blks Blocks) Overlaps(a, b int64) bool {
-	for _, blk := range blks {
-		if blk.Overlaps(a, b) {
-			return true
-		}
-	}
-	return false
 }

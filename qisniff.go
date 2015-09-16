@@ -19,8 +19,10 @@ import (
 var files []string
 
 type diff struct {
-	a []byte
-	b []byte
+	a   []byte
+	b   []byte
+	id  *streamID
+	seq uint32
 }
 
 type diffs []diff
@@ -33,7 +35,7 @@ type streamID struct {
 }
 
 func (i streamID) String() string {
-	return fmt.Sprintf("%v:%v->%v:%v", hex.EncodeToString([]byte(i.srcIP)), i.srcPort, hex.EncodeToString([]byte(i.dstIP)), i.dstPort)
+	return fmt.Sprintf("%v:%v->%v:%v", net.IP(i.srcIP), i.srcPort, net.IP(i.dstIP), i.dstPort)
 }
 
 type stream struct {
@@ -74,16 +76,32 @@ func (s *stream) write(tcp *layers.TCP) error {
 
 	if b > a {
 
-		if s.done.Overlaps(a, b) {
-			previous := make([]byte, b-a)
-			if _, err := s.f.Seek(a, 0); err != nil {
+		for _, overlap := range s.done.Overlaps(a, b) {
+			previous := make([]byte, overlap.B-overlap.A)
+			if _, err := s.f.Seek(overlap.A, 0); err != nil {
 				return err
 			}
 			if _, err := s.f.Read(previous); err != nil {
 				return err
 			}
-			if bytes.Compare(previous, tcp.Payload) != 0 {
-				s.diffs = append(s.diffs, diff{previous, tcp.Payload})
+			relStart := int64(0)
+			relEnd := int64(len(tcp.Payload))
+			if overlap.A > a {
+				relStart += overlap.A - a
+			}
+			if overlap.B-overlap.A < int64(len(tcp.Payload)) {
+				relEnd = relStart + (overlap.B - overlap.A)
+			}
+			relPayload := tcp.Payload[relStart:relEnd]
+
+			if bytes.Compare(previous, relPayload) != 0 {
+				s.diffs = append(s.diffs, diff{
+					a:   previous,
+					b:   relPayload,
+					id:  s.id,
+					seq: tcp.Seq,
+				})
+				fmt.Println("found overlap", overlap, s.id, tcp.Seq, hex.EncodeToString(tcp.Payload))
 			}
 		}
 
@@ -194,7 +212,7 @@ func main() {
 		if len(stream.diffs) > 0 {
 			fmt.Printf("Stream %v has diffs:\n", id)
 			for _, diff := range stream.diffs {
-				fmt.Printf("<A>\n%s\n</A>\n<B>\n%s\n</B>\n", string(diff.a), string(diff.b))
+				fmt.Printf("%v %v\n<A>\n%x\n</A>\n<B>\n%x\n</B>\n", diff.id, diff.seq, diff.a, diff.b)
 			}
 		}
 	}
