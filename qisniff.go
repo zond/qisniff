@@ -120,6 +120,7 @@ func main() {
 		tcp     layers.TCP
 		payload gopacket.Payload
 		decoded []gopacket.LayerType
+		isTCP   bool
 	)
 
 	h, err := pcap.OpenOffline(*file)
@@ -134,7 +135,7 @@ func main() {
 		if err := parser.DecodeLayers(pkt.Data(), &decoded); err != nil {
 			continue
 		}
-		isTCP := false
+		isTCP = false
 		for _, typ := range decoded {
 			switch typ {
 			case layers.LayerTypeIPv4:
@@ -154,6 +155,7 @@ func main() {
 				srcPort: tcp.SrcPort,
 				dstPort: tcp.DstPort,
 			}
+
 			stream, found := streams[*id]
 			if found || tcp.SYN {
 				if tcp.SYN {
