@@ -16,7 +16,7 @@ import (
 	"github.com/zond/qisniff/blocks"
 )
 
-var files []*os.File
+var files []string
 
 type diff struct {
 	a []byte
@@ -50,6 +50,7 @@ func newStream(id *streamID, seq uint32) (*stream, error) {
 	if err != nil {
 		return nil, err
 	}
+	files = append(files, f.Name())
 	return &stream{
 		id:      id,
 		f:       f,
@@ -101,7 +102,15 @@ func (s *stream) write(tcp *layers.TCP) error {
 	return nil
 }
 
+func removeFiles() {
+	for _, file := range files {
+		os.Remove(file)
+	}
+}
+
 func main() {
+	defer removeFiles()
+
 	file := flag.String("file", "", "A file to parse")
 
 	flag.Parse()
