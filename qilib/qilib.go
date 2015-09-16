@@ -1,3 +1,5 @@
+// Package qilib contains the necessary structs and funcs to create sniffing sessions detecting
+// quantum injection attacks.
 package qilib
 
 import (
