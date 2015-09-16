@@ -54,6 +54,7 @@ func main() {
 			fmt.Printf("Unparseable packet\n%v\n", pkt)
 		},
 	})
+	defer sess.Clean()
 
 	log.Fatal(sess.Run())
 

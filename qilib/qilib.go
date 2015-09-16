@@ -210,11 +210,13 @@ func NewSession(c Config) *Session {
 	return s
 }
 
+// Clean will remove all created tempfiles.
 func (s *Session) Clean() error {
-	for _, strm := range s.streams {
+	for id, strm := range s.streams {
 		if s.err = os.Remove(strm.f.Name()); s.err != nil {
 			return s.err
 		}
+		delete(s.streams, id)
 	}
 	return nil
 }
