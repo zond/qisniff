@@ -15,6 +15,8 @@ import (
 	"github.com/zond/qisniff/blocks"
 )
 
+var bars = []string{"-", "\\", "|", "/"}
+
 var files []string
 
 type diff struct {
@@ -128,10 +130,11 @@ func main() {
 	defer removeFiles()
 
 	file := flag.String("file", "", "A file to parse")
+	dev := flag.String("dev", "", "A dev to sniff")
 
 	flag.Parse()
 
-	if *file == "" {
+	if (*file == "" && *dev == "") || (*file != "" && *dev != "") {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -146,17 +149,29 @@ func main() {
 		payload gopacket.Payload
 		decoded []gopacket.LayerType
 		isTCP   bool
+		handle  *pcap.Handle
+		err     error
 	)
 
-	h, err := pcap.OpenOffline(*file)
-	if err != nil {
-		panic(err)
+	if *file != "" {
+		if handle, err = pcap.OpenOffline(*file); err != nil {
+			panic(err)
+		}
+	} else {
+		if handle, err = pcap.OpenLive(*dev, 8196, true, pcap.BlockForever); err != nil {
+			panic(err)
+		}
 	}
-	source := gopacket.NewPacketSource(h, h.LinkType())
+
+	source := gopacket.NewPacketSource(handle, handle.LinkType())
 	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &ip6, &tcp, &payload)
 	streams := map[streamID]*stream{}
 
+	count := 0
+
 	for pkt := range source.Packets() {
+		fmt.Printf("\r%v ", bars[count%len(bars)])
+		count++
 		if err := parser.DecodeLayers(pkt.Data(), &decoded); err != nil {
 			continue
 		}
@@ -195,6 +210,7 @@ func main() {
 			}
 		}
 	}
+	fmt.Println()
 	for id, stream := range streams {
 		if len(stream.diffs) > 0 {
 			fmt.Printf("Stream %v has diffs:\n", id)
