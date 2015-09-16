@@ -60,7 +60,7 @@ func newStream(id *streamID, seq uint32) (*stream, error) {
 
 func (s *stream) write(tcp *layers.TCP) error {
 
-	if tcp.SYN {
+	if (tcp.SYN || tcp.FIN) && len(tcp.Payload) == 0 {
 		s.offset--
 	}
 
