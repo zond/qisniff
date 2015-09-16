@@ -29,8 +29,6 @@ type Diff struct {
 	ID  StreamID
 }
 
-type Diffs []Diff
-
 // The public representation of a stream.
 type StreamID struct {
 	SrcIP   net.IP
