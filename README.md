@@ -7,6 +7,10 @@ segments of the stream with the already received data.
 
 Differences in this data is indicative of trickery.
 
+## Docs
+
+http://godoc.org/github.com/zond/qisniff/qilib
+
 ## Usage
 
 ```
