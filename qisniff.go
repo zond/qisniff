@@ -244,9 +244,9 @@ func main() {
 	fmt.Println()
 	// Report diffs.
 	// TODO: Make this happen immediately, at least in device listening mode.
-	for _, stream := range streams {
+	for id, stream := range streams {
 		if len(stream.diffs) > 0 {
-			for id, diff := range stream.diffs {
+			for _, diff := range stream.diffs {
 				fmt.Printf("%v %v\n<A>\n%s\n</A>\n<B>\n%s\n</B>\n", id, diff.seq, diff.a, diff.b)
 			}
 		}
