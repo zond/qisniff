@@ -1,9 +1,5 @@
 // qisniff tries to assemble incoming tcp streams, and will warn you if any one of them contained packets
 // with different payloads for the same segment of the stream.
-//
-// TODO
-// - Make the -dev mode warn when the injection happens, instead of at exit.
-// - Clean up old streams after n seconds to avoid filling the drive.
 package main
 
 import (
@@ -220,9 +216,8 @@ func main() {
 		}
 	}
 	fmt.Println()
-	for id, stream := range streams {
+	for _, stream := range streams {
 		if len(stream.diffs) > 0 {
-			fmt.Printf("Stream %v has diffs:\n", id)
 			for _, diff := range stream.diffs {
 				fmt.Printf("%v %v\n<A>\n%s\n</A>\n<B>\n%s\n</B>\n", diff.id, diff.seq, diff.a, diff.b)
 			}
