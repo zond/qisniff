@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -74,7 +73,7 @@ func (s *stream) write(tcp *layers.TCP) error {
 	a := s.offset + int64(tcp.Seq)
 	b := a + int64(len(tcp.Payload))
 
-	if b > a {
+	if b > a && (b-a != 1 || !tcp.ACK || tcp.Payload[0] != 0) {
 
 		for _, overlap := range s.done.Overlaps(a, b) {
 			previous := make([]byte, overlap.B-overlap.A)
@@ -101,7 +100,6 @@ func (s *stream) write(tcp *layers.TCP) error {
 					id:  s.id,
 					seq: tcp.Seq,
 				})
-				fmt.Println("found overlap", overlap, s.id, tcp.Seq, hex.EncodeToString(tcp.Payload))
 			}
 		}
 
@@ -139,15 +137,13 @@ func main() {
 	}
 
 	var (
-		srcIP net.IP
-		dstIP net.IP
-		eth   layers.Ethernet
-		ip4   layers.IPv4
-		ip6   layers.IPv6
-		tcp   layers.TCP
-		//	netLayer gopacket.NetworkLayer
+		srcIP   net.IP
+		dstIP   net.IP
+		eth     layers.Ethernet
+		ip4     layers.IPv4
+		ip6     layers.IPv6
+		tcp     layers.TCP
 		payload gopacket.Payload
-		//tcpFrame []byte
 		decoded []gopacket.LayerType
 		isTCP   bool
 	)
@@ -170,23 +166,14 @@ func main() {
 			case layers.LayerTypeIPv4:
 				srcIP = ip4.SrcIP
 				dstIP = ip4.DstIP
-				//netLayer = &ip4
-				//tcpFrame = ip4.Payload
 			case layers.LayerTypeIPv6:
 				srcIP = ip6.SrcIP
 				dstIP = ip6.DstIP
-				//tcpFrame = ip6.Payload
-				//netLayer = &ip6
 			case layers.LayerTypeTCP:
 				isTCP = true
 			}
 		}
 		if isTCP {
-			/*
-				calcSum := sum.SumTCP(netLayer, tcpFrame)
-
-				fmt.Println(calcSum, tcp.Checksum)
-			*/
 			id := &streamID{
 				srcIP:   string(srcIP),
 				dstIP:   string(dstIP),
@@ -212,7 +199,7 @@ func main() {
 		if len(stream.diffs) > 0 {
 			fmt.Printf("Stream %v has diffs:\n", id)
 			for _, diff := range stream.diffs {
-				fmt.Printf("%v %v\n<A>\n%x\n</A>\n<B>\n%x\n</B>\n", diff.id, diff.seq, diff.a, diff.b)
+				fmt.Printf("%v %v\n<A>\n%s\n</A>\n<B>\n%s\n</B>\n", diff.id, diff.seq, diff.a, diff.b)
 			}
 		}
 	}
