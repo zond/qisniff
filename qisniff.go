@@ -30,7 +30,6 @@ type streamID struct {
 	dstIP   string
 	srcPort layers.TCPPort
 	dstPort layers.TCPPort
-	proto   layers.IPProtocol
 }
 
 func (i streamID) String() string {
@@ -115,7 +114,6 @@ func main() {
 	var (
 		srcIP   net.IP
 		dstIP   net.IP
-		proto   layers.IPProtocol
 		eth     layers.Ethernet
 		ip4     layers.IPv4
 		ip6     layers.IPv6
@@ -134,7 +132,7 @@ func main() {
 
 	for pkt := range source.Packets() {
 		if err := parser.DecodeLayers(pkt.Data(), &decoded); err != nil {
-			panic(err)
+			continue
 		}
 		isTCP := false
 		for _, typ := range decoded {
@@ -142,11 +140,9 @@ func main() {
 			case layers.LayerTypeIPv4:
 				srcIP = ip4.SrcIP
 				dstIP = ip4.DstIP
-				proto = ip4.Protocol
 			case layers.LayerTypeIPv6:
 				srcIP = ip6.SrcIP
 				dstIP = ip6.DstIP
-				proto = 0
 			case layers.LayerTypeTCP:
 				isTCP = true
 			}
@@ -157,17 +153,18 @@ func main() {
 				dstIP:   string(dstIP),
 				srcPort: tcp.SrcPort,
 				dstPort: tcp.DstPort,
-				proto:   proto,
 			}
 			stream, found := streams[*id]
-			if !found {
-				if stream, err = newStream(id, tcp.Seq); err != nil {
+			if found || tcp.SYN {
+				if tcp.SYN {
+					if stream, err = newStream(id, tcp.Seq); err != nil {
+						panic(err)
+					}
+					streams[*id] = stream
+				}
+				if err := stream.write(&tcp); err != nil {
 					panic(err)
 				}
-				streams[*id] = stream
-			}
-			if err := stream.write(&tcp); err != nil {
-				panic(err)
 			}
 		}
 	}
@@ -175,7 +172,7 @@ func main() {
 		if len(stream.diffs) > 0 {
 			fmt.Printf("Stream %v has diffs:\n", id)
 			for _, diff := range stream.diffs {
-				fmt.Printf("%s\nvs\n%s\n", diff.a, diff.b)
+				fmt.Printf("<A>\n%s\n</A>\n<B>\n%s\n</B>\n", string(diff.a), string(diff.b))
 			}
 		}
 	}
