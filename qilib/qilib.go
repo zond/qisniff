@@ -7,11 +7,16 @@ import (
 	"math"
 	"net"
 	"os"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/zond/qisniff/blocks"
+)
+
+const (
+	cleanInterval = time.Minute * 10
 )
 
 // A difference detected.
@@ -68,7 +73,8 @@ type stream struct {
 	// The last sequence number, to know when they wrap.
 	lastSeq uint32
 	// The data we have received so far.
-	done blocks.Blocks
+	done       blocks.Blocks
+	lastAccess time.Time
 }
 
 func newStream(sess *Session, id *streamID, seq uint32) (*stream, error) {
@@ -76,7 +82,6 @@ func newStream(sess *Session, id *streamID, seq uint32) (*stream, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess.files = append(sess.files, f.Name())
 	return &stream{
 		session: sess,
 		id:      id,
@@ -174,41 +179,40 @@ type Config struct {
 type Session struct {
 	Config
 
-	// Files opened during the run, to be removed when finished.
-	files []string
-
-	srcIP   net.IP
-	dstIP   net.IP
-	eth     layers.Ethernet
-	ip4     layers.IPv4
-	ip6     layers.IPv6
-	tcp     layers.TCP
-	payload gopacket.Payload
-	decoded []gopacket.LayerType
-	isTCP   bool
-	err     error
-	pkt     gopacket.Packet
-	source  *gopacket.PacketSource
-	parser  *gopacket.DecodingLayerParser
-	sID     *streamID
-	strm    *stream
-	found   bool
-	streams map[streamID]*stream
+	srcIP        net.IP
+	dstIP        net.IP
+	eth          layers.Ethernet
+	ip4          layers.IPv4
+	ip6          layers.IPv6
+	tcp          layers.TCP
+	payload      gopacket.Payload
+	decoded      []gopacket.LayerType
+	isTCP        bool
+	err          error
+	pkt          gopacket.Packet
+	source       *gopacket.PacketSource
+	parser       *gopacket.DecodingLayerParser
+	sID          *streamID
+	strm         *stream
+	found        bool
+	streams      map[streamID]*stream
+	nextCleaning time.Time
 }
 
 func NewSession(c Config) *Session {
 	s := &Session{
-		Config: c,
+		Config:       c,
+		streams:      map[streamID]*stream{},
+		nextCleaning: time.Now().Add(cleanInterval),
 	}
 	s.source = gopacket.NewPacketSource(s.Handle, s.Handle.LinkType())
 	s.parser = gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &s.eth, &s.ip4, &s.ip6, &s.tcp, &s.payload)
-	s.streams = map[streamID]*stream{}
 	return s
 }
 
 func (s *Session) Clean() error {
-	for _, f := range s.files {
-		if s.err = os.Remove(f); s.err != nil {
+	for _, strm := range s.streams {
+		if s.err = os.Remove(strm.f.Name()); s.err != nil {
 			return s.err
 		}
 	}
@@ -282,6 +286,18 @@ func (s *Session) handle() error {
 			}
 			if s.err = s.strm.write(s.pkt, &s.tcp); s.err != nil {
 				return s.err
+			}
+			s.strm.lastAccess = time.Now()
+		}
+	}
+	if time.Now().After(s.nextCleaning) {
+		s.nextCleaning = time.Now().Add(cleanInterval)
+		for id, strm := range s.streams {
+			if strm.lastAccess.Add(cleanInterval).Before(time.Now()) {
+				if s.err = os.Remove(strm.f.Name()); s.err != nil {
+					return s.err
+				}
+				delete(s.streams, id)
 			}
 		}
 	}

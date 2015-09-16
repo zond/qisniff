@@ -70,7 +70,3 @@ X-
 </B>
 ```
 
-## TODO
-
-- Make the -dev mode warn when the injection happens, instead of at exit.
-- Clean up old streams after n seconds to avoid filling the drive.
