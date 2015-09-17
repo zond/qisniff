@@ -11,13 +11,13 @@ Tools that can detect this are relatively rare.
 
 Fox IT (see link above) devised a potential detection method, but state
 
-```
-Evasion
+----
+###Evasion
 
 Note that these detection methods are possibly not evasion proof, one could also easily spoof a FIN packet after the QI packet to close the session. This would stop tracking the TCP segments in most IDS systems. Later packets in this stream will not be matched with previous packets.
 
 Other possibilities is to try to create a partial overlap of data, thus avoiding detection of duplicate sequence numbers.
-```
+---
 
 qisniff doesn't close sessions at FIN packets, and it doesn't use sequence numbers directly to detect overlaps, so qisniff will detect *all* incoming QI packet insertions.
 
