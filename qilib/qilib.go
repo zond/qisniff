@@ -286,8 +286,8 @@ func (s *Session) handle() error {
 		if s.found || s.tcp.SYN {
 			if s.tcp.SYN {
 				if s.found {
-					// Remove the file of the old stream that is now replaced.
-					if s.err = os.Remove(s.strm.f.Name()); s.err != nil {
+					// Clean the old stream, this is a new one.
+					if s.err = s.strm.clean(); s.err != nil {
 						return s.err
 					}
 				}

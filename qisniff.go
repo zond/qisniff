@@ -48,10 +48,10 @@ func main() {
 			count++
 		},
 		Warning: func(pkt gopacket.Packet, diff qilib.Diff) {
-			fmt.Printf("%v %v\n<A>\n%s\n</A>\n<B>\n%s\n</B>\n", diff.ID, diff.Seq, diff.A, diff.B)
+			fmt.Printf("\n%v %v\n<A>\n%s\n</A>\n<B>\n%s\n</B>\n", diff.ID, diff.Seq, diff.A, diff.B)
 		},
 		Unparseable: func(pkt gopacket.Packet) {
-			fmt.Printf("Unparseable packet\n%v\n", pkt)
+			fmt.Printf("\nUnparseable packet\n%v\n", pkt)
 		},
 	})
 	defer sess.Clean()
@@ -59,5 +59,6 @@ func main() {
 	if err := sess.Run(); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println()
 
 }
