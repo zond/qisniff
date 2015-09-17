@@ -1,11 +1,25 @@
 # qisniff
 
-qisniff sniffs for quantum injection (http://www.wired.com/2014/03/quantum/).
+qisniff sniffs for quantum injection (http://blog.fox-it.com/2015/04/20/deep-dive-into-quantum-insert/).
 
 It does this by assembling the streams in temporary files, and comparing incoming packets covering already received
 segments of the stream with the already received data.
 
 Differences in this data is indicative of trickery.
+
+Tools that can detect this are relatively rare.
+
+Fox IT (see link above) devised a potential detection method, but state
+
+```
+Evasion
+
+Note that these detection methods are possibly not evasion proof, one could also easily spoof a FIN packet after the QI packet to close the session. This would stop tracking the TCP segments in most IDS systems. Later packets in this stream will not be matched with previous packets.
+
+Other possibilities is to try to create a partial overlap of data, thus avoiding detection of duplicate sequence numbers.
+```
+
+qisniff doesn't close sessions at FIN packets, and it doesn't use sequence numbers directly to detect overlaps, so qisniff will detect *all* incoming QI packet insertions.
 
 ## Docs
 
