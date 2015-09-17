@@ -24,7 +24,7 @@ qisniff doesn't close sessions at FIN packets, and it doesn't use sequence numbe
 
 ## Docs
 
-http://godoc.org/github.com/zond/qisniff/qilib
+http://godoc.org/github.com/zond/qisniff
 
 ## Example run
 
