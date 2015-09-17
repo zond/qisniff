@@ -1,5 +1,13 @@
-// qisniff tries to assemble incoming tcp streams, and will warn you if any one of them contained packets
-// with different payloads for the same segment of the stream.
+/*
+qisniff tries to assemble incoming tcp streams, and will warn you if any one of them contained packets
+with different payloads for the same segment of the stream.
+
+Usage:
+
+ go get github.com/zond/qisniff
+ qisniff -file=file.pcap
+ qisniff -dev=en0
+*/
 package main
 
 import (

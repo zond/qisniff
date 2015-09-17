@@ -26,14 +26,6 @@ qisniff doesn't close sessions at FIN packets, and it doesn't use sequence numbe
 
 http://godoc.org/github.com/zond/qisniff/qilib
 
-## Usage
-
-```
-go get github.com/zond/qisniff
-qisniff -file=file.pcap
-qisniff -dev=en0
-```
-
 ## Example run
 
 Sniffing a pcap file from a suspected injection by the great firewall of china:

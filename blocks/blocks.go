@@ -1,3 +1,4 @@
+// Package blocks contains logic to detect overlap between segments of a contiguous data stream.
 package blocks
 
 type Block struct {
